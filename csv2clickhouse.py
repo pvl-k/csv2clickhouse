@@ -3,10 +3,10 @@ import pandas as pd
 import clickhouse_connect
 
 dirpath = '/Users/pk/Library/CloudStorage/OneDrive-Личная/GitHub/csv2clickhouse/'   # absolute path to dir with csv-files and credentials
-database_name = 'testdb125'                                                         # name of database
+database_name = 'testdb222'                                                         # name of database
 database_port = '8443'                                                              # ClickHouse port
 database_secure = True                                                              # ClickHouse secure conection setting
-replace_flag = False                                                                # Replace or ignore tables if already exists
+replace_flag = True                                                                 # Replace table or append data if table already exists
 
 
 # read ClickHouse username from 'db_user.txt' file
@@ -104,10 +104,11 @@ def csv2clickhouse(localpath, dbhost, dbport, dbname, dbuser, dbpassword, dbsecu
         # print(query, end='\n\n')
 
         client.command(query)
-        print(f'Table {dbname}.{filename[:-4]} created...', end='\n\n')
+        print(f'The table {dbname}.{filename[:-4]} created.', end='\n')
 
+        print(f'Data is loaded into the table {dbname}.{filename[:-4]} uploaded...', end='\n')
         client.insert_df(f'{dbname}.{filename[:-4]}', df)
-        print(f'Data into table {dbname}.{filename[:-4]} uploaded...', end='\n\n')
+        print(f'Data into the table {dbname}.{filename[:-4]} has uploaded.', end='\n\n')
 
         
 if __name__ == '__main__':
