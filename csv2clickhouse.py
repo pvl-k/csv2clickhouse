@@ -2,11 +2,11 @@ import glob
 import pandas as pd
 import clickhouse_connect
 
-dirpath = '/Users/pk/Library/CloudStorage/OneDrive-Личная/GitHub/csv2clickhouse/'   # absolute path to dir with csv-files and credentials
-database_name = 'testdb222'                                                         # name of database
+dirpath = '/Users/pk/Library/GitHub/csv2clickhouse/'                                # absolute path to dir with csv-files and credentials
+database_name = 'testdb'                                                            # name of database
 database_port = '8443'                                                              # ClickHouse port
 database_secure = True                                                              # ClickHouse secure conection setting
-replace_flag = True                                                                 # Replace table or append data if table already exists
+replace_flag = False                                                                # Replace table or append data if table already exists
 
 
 # read ClickHouse username from 'db_user.txt' file
@@ -83,10 +83,7 @@ def csv2clickhouse(localpath, dbhost, dbport, dbname, dbuser, dbpassword, dbsecu
             
             elif columnType[i] == 'datetime64':
                 columnType[i] = 'DateTime'
-            
-            elif columnType[i] == 'timedeltans':
-                columnType[i] = 'Int64' 
-            
+                        
             else:
                 columnType[i] = 'String'    
 
