@@ -6,6 +6,7 @@ dirpath = '/Users/pk/Library/CloudStorage/OneDrive-Личная/GitHub/csv2click
 database_name = 'testdb125'                                                         # name of database
 database_port = '8443'                                                              # ClickHouse port
 database_secure = True                                                              # ClickHouse secure conection setting
+replace_flag = False                                                                # Replace or ignore tables if already exists
 
 
 # read ClickHouse username from 'db_user.txt' file
@@ -21,7 +22,7 @@ with open(dirpath + 'db_hostname.txt', 'r', encoding='utf-8') as fp:
     database_host = fp.read().rstrip()
 
 
-def csv2clickhouse(localpath, dbhost, dbport, dbname, dbuser, dbpassword, dbsecure):
+def csv2clickhouse(localpath, dbhost, dbport, dbname, dbuser, dbpassword, dbsecure, flag):
     client = clickhouse_connect.get_client(host=dbhost, port=dbport, 
                                            username=dbuser, password=dbpassword, 
                                            secure=dbsecure)
@@ -32,11 +33,11 @@ def csv2clickhouse(localpath, dbhost, dbport, dbname, dbuser, dbpassword, dbsecu
 
     for filename in fileslist:
         df = pd.read_csv(dirpath + filename)
-        print(filename)
-        print(df.dtypes)
-        print()
-        print(df)
-        print()
+        # print(filename)
+        # print(df.dtypes)
+        # print()
+        # print(df)
+        # print()
         columnName = list(df.columns.values)
         columnType = [str(elem) for elem in df.dtypes]
         
@@ -94,21 +95,23 @@ def csv2clickhouse(localpath, dbhost, dbport, dbname, dbuser, dbpassword, dbsecu
         query = ''
         for item in columnNameTypes:
             query += item + ' Nullable(' + columnNameTypes[item] + '), '
-        # query = f'CREATE TABLE IF NOT EXISTS {dbname}.{filename[:-4]} ({query[:-2]}) ENGINE Memory'
-        query = f'CREATE OR REPLACE TABLE {dbname}.{filename[:-4]} ({query[:-2]}) ENGINE Memory'
-        print(query, end='\n\n')
+        
+        if flag == True:
+            query = f'CREATE TABLE IF NOT EXISTS {dbname}.{filename[:-4]} ({query[:-2]}) ENGINE Memory'
+        elif flag == False:
+            query = f'CREATE OR REPLACE TABLE {dbname}.{filename[:-4]} ({query[:-2]}) ENGINE Memory'
+        
+        # print(query, end='\n\n')
 
         client.command(query)
         print(f'Table {dbname}.{filename[:-4]} created...', end='\n\n')
-        # print()
 
         client.insert_df(f'{dbname}.{filename[:-4]}', df)
         print(f'Data into table {dbname}.{filename[:-4]} uploaded...', end='\n\n')
-        # print()
 
         
 if __name__ == '__main__':
     csv2clickhouse(dirpath, database_host, 
                    database_port, database_name, 
                    database_username, database_password, 
-                   database_secure)
+                   database_secure, replace_flag)
