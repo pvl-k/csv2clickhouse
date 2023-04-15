@@ -2,21 +2,21 @@ import glob
 import pandas as pd
 import clickhouse_connect
 
-dirpath = '/Users/pk/Downloads/data/'                           # absolute path to dir with csv-files and credentials
-database_name = 'testdb6'                                       # name of database
-database_port = '8443'                                          # ClickHouse port
-database_secure = True                                          # ClickHouse secure conection setting
-action_flag = 'EMPTY'                                           # Action if data exists: APPEND for append or EMPTY for cleaning data before insert 
+dirpath = '/Users/pk/Library/CloudStorage/OneDrive-Личная/GitHub/csv2clickhouse/'   # absolute path to dir with csv-files and credentials
+database_name = 'testdb2'                                                           # name of database
+database_port = '8443'                                                              # ClickHouse port
+database_secure = True                                                              # ClickHouse secure conection setting
+action_flag = 'APPEND'                                                              # Action if data exists: APPEND for append or EMPTY for cleaning data before insert 
 
-# read ClickHouse username
+# read ClickHouse username from 'db_user.txt' file
 with open(dirpath + 'db_user.txt', 'r', encoding='utf-8') as fp:
     database_username = fp.read().rstrip()
 
-# read ClickHouse password
+# read ClickHouse password from 'db_user_password.txt' file
 with open(dirpath + 'db_user_password.txt', 'r', encoding='utf-8') as fp:
     database_password = fp.read().rstrip()
 
-# ClickHouse host
+# read ClickHouse host from 'db_hostname.txt' file
 with open(dirpath + 'db_hostname.txt', 'r', encoding='utf-8') as fp:
     database_host = fp.read().rstrip()
 
