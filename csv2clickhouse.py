@@ -2,7 +2,8 @@ import glob
 import pandas as pd
 import clickhouse_connect
 
-dirpath = '/Users/pk/Library/GitHub/csv2clickhouse/'                                # absolute path to dir with csv-files and credentials
+# variables to change
+dirpath = '/Users/pk/Library/CloudStorage/OneDrive-Личная/GitHub/csv2clickhouse/'                                # absolute path to dir with CSV-files and credentials
 database_name = 'testdb'                                                            # name of database
 database_port = '8443'                                                              # ClickHouse port
 database_secure = True                                                              # ClickHouse secure conection setting
@@ -94,9 +95,9 @@ def csv2clickhouse(localpath, dbhost, dbport, dbname, dbuser, dbpassword, dbsecu
             query += item + ' Nullable(' + columnNameTypes[item] + '), '
         
         if flag == True:
-            query = f'CREATE TABLE IF NOT EXISTS {dbname}.{filename[:-4]} ({query[:-2]}) ENGINE Memory'
+            query = f'CREATE TABLE IF NOT EXISTS {dbname}.{filename[:-4]} ({query[:-2]}) ENGINE = MergeTree() ORDER BY tuple()'
         elif flag == False:
-            query = f'CREATE OR REPLACE TABLE {dbname}.{filename[:-4]} ({query[:-2]}) ENGINE Memory'
+            query = f'CREATE OR REPLACE TABLE {dbname}.{filename[:-4]} ({query[:-2]}) ENGINE = MergeTree() ORDER BY tuple()'
         
         # print(query, end='\n\n')
 
