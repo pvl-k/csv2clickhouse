@@ -3,7 +3,7 @@ import pandas as pd
 import clickhouse_connect
 
 # variables to change
-dirpath = '/Users/pk/Library/CloudStorage/OneDrive-Личная/GitHub/csv2clickhouse/'                                # absolute path to dir with CSV-files and credentials
+dirpath = '/Users/pk/GitHub/csv2clickhouse/'                                        # absolute path to dir with CSV-files and credentials
 database_name = 'testdb'                                                            # name of database
 database_port = '8443'                                                              # ClickHouse port
 database_secure = True                                                              # ClickHouse secure conection setting
