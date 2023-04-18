@@ -5,7 +5,7 @@ It uses Pandas to define the data schema before loading CSV files into ClickHous
 
 ## Usage
 
-Place all your CSV files in one directory with the PY-script, make changes to the TXT files according to your credentials, and specify the relevant data in the Variables section of the PY-script.
+Place all your CSV files in one directory with the Python-script, make changes to the TXT files according to your credentials, and specify the relevant data in the Variables section of the Python-script.
 
 ## Note
 
