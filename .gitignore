@@ -1,6 +1,15 @@
 
+# Environment variables (contains sensitive credentials)
+.env
+
+# Old credential files (deprecated, use .env instead)
 db_hostname.txt
 db_user.txt
 db_user_password.txt
+
+# Data files
 *.zip
 *.csv
+
+# System files
+.DS_Store
