@@ -10,14 +10,37 @@ load_dotenv()
 # Get the directory where this script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Configuration variables
-database_name = os.getenv('DB_NAME', 'testdb')
-database_host = os.getenv('DB_HOST', 'localhost')
-database_port = os.getenv('DB_PORT', '8443')
-database_user = os.getenv('DB_USER', 'default')
-database_password = os.getenv('DB_PASSWORD', '')
-database_secure = os.getenv('DB_SECURE', 'True').lower() == 'true'
-replace_flag = os.getenv('REPLACE_FLAG', 'False').lower() == 'true'
+# Load configuration from environment variables
+database_name = os.getenv('DB_NAME')
+database_host = os.getenv('DB_HOST')
+database_port = os.getenv('DB_PORT')
+database_user = os.getenv('DB_USER')
+database_password = os.getenv('DB_PASSWORD')
+database_secure = os.getenv('DB_SECURE')
+replace_flag = os.getenv('REPLACE_FLAG')
+
+# Validate required environment variables
+required_vars = {
+    'DB_NAME': database_name,
+    'DB_HOST': database_host,
+    'DB_PORT': database_port,
+    'DB_USER': database_user,
+    'DB_PASSWORD': database_password,
+    'DB_SECURE': database_secure,
+    'REPLACE_FLAG': replace_flag
+}
+
+missing_vars = [var_name for var_name, var_value in required_vars.items() if not var_value]
+
+if missing_vars:
+    raise ValueError(
+        f"Missing required environment variables: {', '.join(missing_vars)}\n"
+        f"Please create a .env file from .env.example and fill in all values."
+    )
+
+# Convert string values to appropriate types
+database_secure = database_secure.lower() == 'true'
+replace_flag = replace_flag.lower() == 'true'
 
 # Type mapping from Pandas to ClickHouse
 type_mapping = {
