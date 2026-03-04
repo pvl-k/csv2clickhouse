@@ -4,8 +4,7 @@ from dotenv import load_dotenv
 import pandas as pd
 import clickhouse_connect
 
-# Load environment variables
-load_dotenv()
+
 
 # Configuration keys
 REQUIRED_VARS = ['DB_NAME', 'DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_SECURE', 'REPLACE_FLAG']
@@ -27,13 +26,14 @@ TYPE_MAPPING = {
     'float16': 'Float32',
     'float32': 'Float32',
     'float64': 'Float64',
-    'float128': 'Float128',
+    'float128': 'Float64',
     'bool': 'Boolean',
     'datetime64': 'DateTime'
 }
 
 def get_config():
     """Retrieve and validate configuration from environment variables."""
+    load_dotenv()
     missing = [var for var in REQUIRED_VARS if not os.getenv(var)]
     if missing:
         raise ValueError(
@@ -44,7 +44,7 @@ def get_config():
         'database': os.getenv('DB_NAME'),
         'replace_tables': os.getenv('REPLACE_FLAG').lower() == 'true',
         'host': os.getenv('DB_HOST'),
-        'port': os.getenv('DB_PORT'),
+        'port': int(os.getenv('DB_PORT')),
         'username': os.getenv('DB_USER'),
         'password': os.getenv('DB_PASSWORD'),
         'secure': os.getenv('DB_SECURE').lower() == 'true'
@@ -53,26 +53,31 @@ def get_config():
 def csv2clickhouse(csv_dir, dbname, replace_tables, **ch_kwargs):
     """Load all CSVs from the given directory into ClickHouse."""
     client = clickhouse_connect.get_client(**ch_kwargs)
-    client.command(f'create database if not exists {dbname}')
+    client.command(f'create database if not exists `{dbname}`')
     
     for csv_file in Path(csv_dir).glob('*.csv'):
         df = pd.read_csv(csv_file)
+        if df.empty:
+            print(f'Skipping empty file: {csv_file.name}')
+            continue
+        
         table_name = csv_file.stem
+        fqn = f'`{dbname}`.`{table_name}`'
         
         # Build column definitions
         columns_def = ', '.join(
-            f"{str(col)} Nullable({TYPE_MAPPING.get(str(dtype), 'String')})"
+            f"`{col}` Nullable({TYPE_MAPPING.get(str(dtype), 'String')})"
             for col, dtype in df.dtypes.items()
         )
         
         # Execute table creation
         mode = 'or replace table' if replace_tables else 'table if not exists'
-        client.command(f'create {mode} {dbname}.{table_name} ({columns_def}) engine = MergeTree() order by tuple()')
-        print(f'Table {dbname}.{table_name} created')
+        client.command(f'create {mode} {fqn} ({columns_def}) engine = MergeTree() order by tuple()')
+        print(f'Table {fqn} created')
         
         # Insert data
         client.insert_df(f'{dbname}.{table_name}', df)
-        print(f'Data loaded into {dbname}.{table_name}: {len(df)} rows\n')
+        print(f'Data loaded into {fqn}: {len(df)} rows\n')
 
 if __name__ == '__main__':
     config = get_config()
