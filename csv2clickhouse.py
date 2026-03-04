@@ -1,115 +1,84 @@
 import os
-import glob
+from pathlib import Path
 from dotenv import load_dotenv
 import pandas as pd
 import clickhouse_connect
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-# Get the directory where this script is located
-script_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Load configuration from environment variables
-database_name = os.getenv('DB_NAME')
-database_host = os.getenv('DB_HOST')
-database_port = os.getenv('DB_PORT')
-database_user = os.getenv('DB_USER')
-database_password = os.getenv('DB_PASSWORD')
-database_secure = os.getenv('DB_SECURE')
-replace_flag = os.getenv('REPLACE_FLAG')
-
-# Validate required environment variables
-required_vars = {
-    'DB_NAME': database_name,
-    'DB_HOST': database_host,
-    'DB_PORT': database_port,
-    'DB_USER': database_user,
-    'DB_PASSWORD': database_password,
-    'DB_SECURE': database_secure,
-    'REPLACE_FLAG': replace_flag
-}
-
-missing_vars = [var_name for var_name, var_value in required_vars.items() if not var_value]
-
-if missing_vars:
-    raise ValueError(
-        f"Missing required environment variables: {', '.join(missing_vars)}\n"
-        f"Please create a .env file from .env.example and fill in all values."
-    )
-
-# Convert string values to appropriate types
-database_secure = database_secure.lower() == 'true'
-replace_flag = replace_flag.lower() == 'true'
+# Configuration keys
+REQUIRED_VARS = ['DB_NAME', 'DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_SECURE', 'REPLACE_FLAG']
 
 # Type mapping from Pandas to ClickHouse
-type_mapping = {
-    'int8': 'Int8', 'int16': 'Int16', 'int32': 'Int32', 'int64': 'Int64',
-    'int128': 'Int128', 'int256': 'Int256',
-    'uint8': 'UInt8', 'uint16': 'UInt16', 'uint32': 'UInt32', 'uint64': 'UInt64',
-    'uint128': 'UInt128', 'uint256': 'UInt256',
-    'float16': 'Float32', 'float32': 'Float32', 'float64': 'Float64', 'float128': 'Float128',
+TYPE_MAPPING = {
+    'int8': 'Int8',
+    'int16': 'Int16',
+    'int32': 'Int32',
+    'int64': 'Int64',
+    'int128': 'Int128',
+    'int256': 'Int256',
+    'uint8': 'UInt8',
+    'uint16': 'UInt16',
+    'uint32': 'UInt32',
+    'uint64': 'UInt64',
+    'uint128': 'UInt128',
+    'uint256': 'UInt256',
+    'float16': 'Float32',
+    'float32': 'Float32',
+    'float64': 'Float64',
+    'float128': 'Float128',
     'bool': 'Boolean',
     'datetime64': 'DateTime'
 }
 
+def get_config():
+    """Retrieve and validate configuration from environment variables."""
+    missing = [var for var in REQUIRED_VARS if not os.getenv(var)]
+    if missing:
+        raise ValueError(
+            f"Missing required environment variables: {', '.join(missing)}\n"
+            "Please create a .env file from .env.example and fill in all values."
+        )
+    return {
+        'database': os.getenv('DB_NAME'),
+        'replace_tables': os.getenv('REPLACE_FLAG').lower() == 'true',
+        'host': os.getenv('DB_HOST'),
+        'port': os.getenv('DB_PORT'),
+        'username': os.getenv('DB_USER'),
+        'password': os.getenv('DB_PASSWORD'),
+        'secure': os.getenv('DB_SECURE').lower() == 'true'
+    }
 
-def csv2clickhouse(csv_dir, dbhost, dbport, dbname, dbuser, dbpassword, dbsecure, replace_tables):
-    # Connect to ClickHouse
-    client = clickhouse_connect.get_client(
-        host=dbhost, 
-        port=dbport, 
-        username=dbuser, 
-        password=dbpassword, 
-        secure=dbsecure
-    )
-    
-    # Get list of CSV files
-    csv_files = glob.glob(os.path.join(csv_dir, '*.csv'))
-    
-    # Create database if not exists
+def csv2clickhouse(csv_dir, dbname, replace_tables, **ch_kwargs):
+    """Load all CSVs from the given directory into ClickHouse."""
+    client = clickhouse_connect.get_client(**ch_kwargs)
     client.command(f'create database if not exists {dbname}')
     
-    # Process each CSV file
-    for csv_file in csv_files:
-        filename = os.path.basename(csv_file)
-        table_name = filename[:-4]  # Remove .csv extension
-        
-        # Read CSV file
+    for csv_file in Path(csv_dir).glob('*.csv'):
         df = pd.read_csv(csv_file)
+        table_name = csv_file.stem
         
-        # Map column types from Pandas to ClickHouse using dictionary
-        column_types = {}
-        for col, dtype in df.dtypes.items():
-            clickhouse_type = type_mapping.get(str(dtype), 'String')
-            column_types[col] = clickhouse_type
-        
-        # Build column definitions for create table statement
-        columns_def = ', '.join([f'{col} Nullable({col_type})' for col, col_type in column_types.items()])
-        
-        # Create table query
-        if replace_tables:
-            query = f'create or replace table {dbname}.{table_name} ({columns_def}) engine = MergeTree() order by tuple()'
-        else:
-            query = f'create table if not exists {dbname}.{table_name} ({columns_def}) engine = MergeTree() order by tuple()'
+        # Build column definitions
+        columns_def = ', '.join(
+            f"{str(col)} Nullable({TYPE_MAPPING.get(str(dtype), 'String')})"
+            for col, dtype in df.dtypes.items()
+        )
         
         # Execute table creation
-        client.command(query)
+        mode = 'or replace table' if replace_tables else 'table if not exists'
+        client.command(f'create {mode} {dbname}.{table_name} ({columns_def}) engine = MergeTree() order by tuple()')
         print(f'Table {dbname}.{table_name} created')
         
         # Insert data
         client.insert_df(f'{dbname}.{table_name}', df)
         print(f'Data loaded into {dbname}.{table_name}: {len(df)} rows\n')
 
-
 if __name__ == '__main__':
+    config = get_config()
     csv2clickhouse(
-        csv_dir=script_dir,
-        dbhost=database_host,
-        dbport=database_port,
-        dbname=database_name,
-        dbuser=database_user,
-        dbpassword=database_password,
-        dbsecure=database_secure,
-        replace_tables=replace_flag
+        csv_dir=Path(__file__).resolve().parent,
+        dbname=config.pop('database'),
+        replace_tables=config.pop('replace_tables'),
+        **config
     )
